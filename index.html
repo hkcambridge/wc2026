@@ -227,10 +227,10 @@
                             <div style={{ fontSize: 12.5, overflow: 'hidden', textOverflow: 'ellipsis' }}>{matchName(g)}</div>
                             <div className="mono" style={{
                               fontSize: 11.5, fontWeight: 600,
-                              color: open ? 'var(--accent)' : 'var(--muted)',
-                              filter: open ? 'none' : 'blur(4px)',
+                              color: open ? 'var(--accent)' : 'transparent',
+                              textShadow: open ? 'none' : '0 0 7px var(--muted)',
                               userSelect: open ? 'auto' : 'none',
-                              transition: 'filter .18s',
+                              transition: 'color .18s, text-shadow .18s',
                             }} title={open ? '' : t.show}>
                               {`${g.homeScore}–${g.awayScore}`}
                             </div>
