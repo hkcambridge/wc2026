@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>World Cup 2026 — Scores &amp; Highlights</title>
+  <title>World Cup Daily 世界盃每日精華</title>
   <script>try { document.documentElement.dataset.theme = localStorage.getItem('wc2026-theme') || 'light'; } catch (e) {}</script>
   <meta name="description" content="Live World Cup 2026 scores, fixtures and match highlights." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -335,7 +335,16 @@
         try { return localStorage.getItem('wc2026-theme') || 'light'; } catch (_) { return 'light'; }
       });
       const [lang, setLang] = useState(() => {
-        try { return localStorage.getItem('wc2026-lang') || 'en'; } catch (_) { return 'en'; }
+        // Default to Traditional Chinese if the device prefers any Chinese variant
+        // (zh-TW / zh-HK / zh-CN / zh-Hans / zh-Hant …), otherwise English.
+        const detect = () => {
+          try {
+            const langs = (navigator.languages && navigator.languages.length)
+              ? navigator.languages : [navigator.language || ''];
+            return langs.some(l => /^zh\b/i.test(l)) ? 'zh' : 'en';
+          } catch (_) { return 'en'; }
+        };
+        try { return localStorage.getItem('wc2026-lang') || detect(); } catch (_) { return detect(); }
       });
       const t = T[lang] || T.en;
 
