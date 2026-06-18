@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>World Cup Daily 世界盃每日精華</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
   <script>try { document.documentElement.dataset.theme = localStorage.getItem('wc2026-theme') || 'light'; } catch (e) {}</script>
   <meta name="description" content="Live World Cup 2026 scores, fixtures and match highlights." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -218,31 +221,35 @@
                         return (
                           <button key={g.id} onClick={() => setRevealed(r => ({ ...r, [g.id]: !r[g.id] }))} style={{
                             all: 'unset', cursor: 'pointer',
-                            display: 'grid', gridTemplateColumns: '1fr auto auto',
-                            alignItems: 'center', gap: 8, width: '100%',
+                            display: 'grid', gridTemplateColumns: '1fr 16px 34px',
+                            alignItems: 'center', gap: 12, width: '100%',
                             padding: '6px 0', fontSize: 12,
                             borderTop: i === 0 ? 'none' : '1px dashed var(--hairline-soft)',
                             whiteSpace: 'nowrap',
                           }}>
                             <div style={{ fontSize: 12.5, overflow: 'hidden', textOverflow: 'ellipsis' }}>{matchName(g)}</div>
-                            {open ? (
-                              <div key="score" className="mono" style={{
-                                fontSize: 11.5, fontWeight: 600, color: 'var(--accent)',
-                              }}>{`${g.homeScore}–${g.awayScore}`}</div>
-                            ) : (
-                              <div key="spoiler" className="mono" title={t.show} style={{
-                                fontSize: 11.5, fontWeight: 600, color: 'transparent',
-                                textShadow: '0 0 7px var(--muted)', userSelect: 'none',
-                              }}>{`${g.homeScore}–${g.awayScore}`}</div>
-                            )}
-                            <div style={{ width: 16, textAlign: 'center' }}>
+                            <div style={{ display: 'flex', justifyContent: 'center' }}>
                               {g.highlightUrl && (
                                 <a href={g.highlightUrl} target="_blank" rel="noreferrer"
                                   onClick={e => e.stopPropagation()}
                                   title="ITV Highlights"
-                                  style={{ color: 'var(--red)', fontSize: 13, textDecoration: 'none', opacity: 0.85 }}>▶</a>
+                                  style={{ display: 'inline-flex', textDecoration: 'none' }}>
+                                  <svg width="14" height="14" viewBox="0 0 24 24">
+                                    <polygon points="7,5 19,12 7,19" fill="#bc2b3b" stroke="#bc2b3b" strokeWidth="3.4" strokeLinejoin="round" strokeLinecap="round" />
+                                  </svg>
+                                </a>
                               )}
                             </div>
+                            {open ? (
+                              <div key="score" className="mono" style={{
+                                fontSize: 11.5, fontWeight: 600, color: 'var(--accent)', textAlign: 'right',
+                              }}>{`${g.homeScore}–${g.awayScore}`}</div>
+                            ) : (
+                              <div key="spoiler" className="mono" title={t.show} style={{
+                                fontSize: 11.5, fontWeight: 600, color: 'transparent', textAlign: 'right',
+                                textShadow: '0 0 7px var(--muted)', userSelect: 'none',
+                              }}>{`${g.homeScore}–${g.awayScore}`}</div>
+                            )}
                           </button>
                         );
                       })}
@@ -313,8 +320,8 @@
       const cell = (active) => ({
         padding: '0 9px', height: 28, display: 'flex', alignItems: 'center',
         fontSize: 11, fontWeight: 600, letterSpacing: 0.3,
-        color: active ? 'var(--accent)' : 'var(--muted)',
-        background: active ? 'color-mix(in oklab, var(--accent) 14%, transparent)' : 'transparent',
+        color: active ? 'var(--muted)' : 'var(--subtle)',
+        background: active ? 'color-mix(in oklab, var(--text) 7%, var(--surface))' : 'transparent',
         transition: 'background .15s, color .15s',
       });
       return (
