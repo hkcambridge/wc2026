@@ -3,3 +3,6 @@ node_modules/
 .wrangler/
 .dev.vars
 *.log
+
+# Cloudflare Worker source — kept locally, deployed via wrangler (not served by Pages)
+worker/
