@@ -225,15 +225,16 @@
                             whiteSpace: 'nowrap',
                           }}>
                             <div style={{ fontSize: 12.5, overflow: 'hidden', textOverflow: 'ellipsis' }}>{matchName(g)}</div>
-                            <div className="mono" style={{
-                              fontSize: 11.5, fontWeight: 600,
-                              color: open ? 'var(--accent)' : 'transparent',
-                              textShadow: open ? 'none' : '0 0 7px var(--muted)',
-                              userSelect: open ? 'auto' : 'none',
-                              transition: 'color .18s, text-shadow .18s',
-                            }} title={open ? '' : t.show}>
-                              {`${g.homeScore}–${g.awayScore}`}
-                            </div>
+                            {open ? (
+                              <div key="score" className="mono" style={{
+                                fontSize: 11.5, fontWeight: 600, color: 'var(--accent)',
+                              }}>{`${g.homeScore}–${g.awayScore}`}</div>
+                            ) : (
+                              <div key="spoiler" className="mono" title={t.show} style={{
+                                fontSize: 11.5, fontWeight: 600, color: 'transparent',
+                                textShadow: '0 0 7px var(--muted)', userSelect: 'none',
+                              }}>{`${g.homeScore}–${g.awayScore}`}</div>
+                            )}
                             <div style={{ width: 16, textAlign: 'center' }}>
                               {g.highlightUrl && (
                                 <a href={g.highlightUrl} target="_blank" rel="noreferrer"
@@ -396,14 +397,9 @@
                   <circle cx="10" cy="10" r="7.5"/><path d="M7.5 9.5c0-2 1.5-3.2 3.5-3.2 1.9 0 3 .9 3.5 2.2M13 13c-.6 1-2 1.5-3.5 1.3-2-.2-3-1.2-3-2.5 0-1.2 1.2-2 3-1.9 2.7.1 4 1.4 3.8 3-.2 1.5-1.7 2.3-3.8 2.3"/>
                 </svg>
               </a>
-              <a href="https://www.youtube.com/@hk.cambridge" target="_blank" rel="noreferrer" aria-label="YouTube" style={{ color: 'var(--muted)', display: 'inline-flex' }}>
-                <svg width="15" height="15" viewBox="0 0 20 20" fill="none">
-                  <rect x="1.5" y="4.5" width="17" height="11" rx="3" stroke="currentColor" strokeWidth="1.6"/>
-                  <path d="M8.2 7.6l4.2 2.4-4.2 2.4V7.6z" fill="currentColor"/>
-                </svg>
-              </a>
             </div>
             <div>{t.footA}ITV Sport{t.footB}</div>
+            <div style={{ marginTop: 4, opacity: 0.6 }}>version 1.01</div>
           </div>
         </div>
       );
