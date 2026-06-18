@@ -1,15 +1,28 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>World Cup 2026 — Scores &amp; Highlights</title>
+  <script>try { document.documentElement.dataset.theme = localStorage.getItem('wc2026-theme') || 'light'; } catch (e) {}</script>
   <meta name="description" content="Live World Cup 2026 scores, fixtures and match highlights." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>
     :root {
+      --bg: #f8f7f4;
+      --surface: #ffffff;
+      --hairline: #e7e5e0;
+      --hairline-soft: #eeece7;
+      --text: #18181b;
+      --muted: #52525b;
+      --subtle: #71717a;
+      --accent: #4d7c0f;
+      --red: #dc2626;
+      --badge-cam: #db2777;
+    }
+    html[data-theme="dark"] {
       --bg: #1a1a1e;
       --surface: #212126;
       --hairline: #2e2e36;
@@ -19,7 +32,6 @@
       --subtle: #6b6b74;
       --accent: #a3e635;
       --red: #f87171;
-      --amber: #fbbf24;
       --badge-cam: #f472b6;
     }
     * { box-sizing: border-box; }
@@ -61,6 +73,46 @@
     const { useState, useEffect } = React;
 
     const WORKER_URL = "https://wc2026-data.pitchside.workers.dev/";
+
+    // UI strings per language
+    const T = {
+      en: { title: 'World Cup 2026', results: 'Results', upcoming: 'Upcoming', show: 'show',
+            live: 'LIVE', vs: 'v', standings: 'Standings', fixtures: 'Fixtures & TV',
+            empty: 'No matches in the last / next 24h',
+            footA: 'Scores via ESPN · Highlights via ', footB: ' · all times local' },
+      zh: { title: '2026 世界盃', results: '賽果', upcoming: '即將開賽', show: '顯示',
+            live: '直播', vs: '對', standings: '排名榜', fixtures: '賽程及轉播',
+            empty: '過去及未來 24 小時內沒有賽事',
+            footA: '賽果來自 ESPN · 精華來自 ', footB: ' · 時間為當地時間' },
+    };
+
+    // ESPN displayName (lowercased) -> Traditional Chinese
+    const TEAM_ZH = {
+      'canada': '加拿大', 'mexico': '墨西哥', 'united states': '美國', 'usa': '美國',
+      'argentina': '阿根廷', 'brazil': '巴西', 'colombia': '哥倫比亞', 'ecuador': '厄瓜多爾',
+      'paraguay': '巴拉圭', 'uruguay': '烏拉圭', 'bolivia': '玻利維亞', 'chile': '智利', 'peru': '秘魯',
+      'australia': '澳洲', 'iran': '伊朗', 'japan': '日本', 'jordan': '約旦',
+      'south korea': '南韓', 'korea republic': '南韓', 'qatar': '卡塔爾',
+      'saudi arabia': '沙特阿拉伯', 'uzbekistan': '烏茲別克', 'iraq': '伊拉克',
+      'algeria': '阿爾及利亞', 'cape verde': '佛得角', 'egypt': '埃及', 'ghana': '加納',
+      'ivory coast': '象牙海岸', "côte d'ivoire": '象牙海岸', 'morocco': '摩洛哥',
+      'senegal': '塞內加爾', 'south africa': '南非', 'tunisia': '突尼西亞',
+      'nigeria': '尼日利亞', 'cameroon': '喀麥隆', 'dr congo': '剛果民主共和國', 'congo dr': '剛果民主共和國',
+      'curacao': '庫拉索', 'curaçao': '庫拉索', 'haiti': '海地', 'panama': '巴拿馬',
+      'costa rica': '哥斯達黎加', 'honduras': '洪都拉斯', 'jamaica': '牙買加',
+      'new zealand': '紐西蘭', 'new caledonia': '新喀里多尼亞',
+      'austria': '奧地利', 'belgium': '比利時', 'croatia': '克羅地亞',
+      'england': '英格蘭', 'france': '法國', 'germany': '德國',
+      'netherlands': '荷蘭', 'norway': '挪威', 'portugal': '葡萄牙',
+      'scotland': '蘇格蘭', 'wales': '威爾斯', 'spain': '西班牙', 'switzerland': '瑞士',
+      'czechia': '捷克', 'czech republic': '捷克', 'bosnia-herzegovina': '波斯尼亞',
+      'italy': '意大利', 'denmark': '丹麥', 'sweden': '瑞典', 'turkey': '土耳其', 'türkiye': '土耳其',
+      'ukraine': '烏克蘭', 'poland': '波蘭', 'slovakia': '斯洛伐克', 'slovenia': '斯洛文尼亞',
+      'serbia': '塞爾維亞', 'hungary': '匈牙利', 'romania': '羅馬尼亞', 'kosovo': '科索沃',
+      'albania': '阿爾巴尼亞', 'north macedonia': '北馬其頓', 'ireland': '愛爾蘭',
+    };
+
+    const tn = (name, lang) => (lang === 'zh' ? (TEAM_ZH[name.toLowerCase()] || name) : name);
 
     function Panel({ children, style = {}, pad = 14 }) {
       return (
@@ -107,117 +159,189 @@
       );
     }
 
-    function WorldCupWidget({ data, loading }) {
+    function WorldCupWidget({ data, loading, lang, t, theme, onToggleTheme, onToggleLang }) {
       const [revealed, setRevealed] = useState({});
       const fmtTime = (iso) => new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-      const fmtDay = (iso) => new Date(iso).toLocaleDateString('en-GB', { weekday: 'short' });
-      const isEvening = (iso) => { const h = new Date(iso).getHours(); return h >= 18 && h < 23; };
+      const fmtDay = (iso) => new Date(iso).toLocaleDateString(lang === 'zh' ? 'zh-HK' : 'en-GB', { weekday: 'short' });
       const empty = !data || (data.recent.length === 0 && data.upcoming.length === 0);
+      const matchName = (g) =>
+        `${g.homeFlag ? g.homeFlag + ' ' : ''}${tn(g.home, lang)} ${t.vs} ${g.awayFlag ? g.awayFlag + ' ' : ''}${tn(g.away, lang)}`;
+
+      const iconBtn = { color: 'var(--muted)', textDecoration: 'none', border: '1px solid var(--hairline-soft)', borderRadius: 999, padding: '3px 7px', display: 'flex', alignItems: 'center' };
+
+      const headerInfo = (
+        <div style={{ display: 'flex', gap: 6 }}>
+          <a href={(data && data.tableUrl) || 'https://www.bbc.co.uk/sport/football/world-cup/table'} target="_blank" rel="noreferrer" title={t.standings} style={iconBtn}>
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="1" y="2" width="14" height="2.2" rx=".8" fill="currentColor" opacity=".55"/>
+              <rect x="1" y="6.2" width="14" height="2.2" rx=".8" fill="currentColor" opacity=".75"/>
+              <rect x="1" y="10.4" width="14" height="2.2" rx=".8" fill="currentColor"/>
+              <rect x="1" y="2" width="2.2" height="10.6" rx=".8" fill="currentColor" opacity=".4"/>
+            </svg>
+          </a>
+          <a href="https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026/scores-fixtures?country=GB&wtw-filter=ALL" target="_blank" rel="noreferrer" title={t.fixtures} style={iconBtn}>
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="1" y="3.5" width="14" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
+              <line x1="4.5" y1="13.5" x2="11.5" y2="13.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+              <line x1="8" y1="12.5" x2="8" y2="13.5" stroke="currentColor" strokeWidth="1.4"/>
+              <path d="M6 10.5L9.5 8 6 5.5v5z" fill="currentColor" opacity=".7"/>
+            </svg>
+          </a>
+        </div>
+      );
+
+      const controls = (
+        <div style={{ borderTop: '1px solid var(--hairline-soft)', padding: '12px 16px 14px', display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center' }}>
+          <LangToggle lang={lang} onToggle={onToggleLang} />
+          <ThemeToggle theme={theme} onToggle={onToggleTheme} />
+        </div>
+      );
 
       return (
         <Panel pad={0}>
           <div style={{ padding: '14px 14px 0 14px' }}>
-            <SectionHeader badge="WC" badgeColor="var(--badge-cam)" label="World Cup 2026" right={
-              <div style={{ display: 'flex', gap: 6 }}>
-                <a href={(data && data.tableUrl) || 'https://www.bbc.co.uk/sport/football/world-cup/table'} target="_blank" rel="noreferrer" title="Standings"
-                  style={{ color: 'var(--muted)', textDecoration: 'none', border: '1px solid var(--hairline-soft)', borderRadius: 999, padding: '3px 7px', display: 'flex', alignItems: 'center' }}>
-                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="1" y="2" width="14" height="2.2" rx=".8" fill="currentColor" opacity=".55"/>
-                    <rect x="1" y="6.2" width="14" height="2.2" rx=".8" fill="currentColor" opacity=".75"/>
-                    <rect x="1" y="10.4" width="14" height="2.2" rx=".8" fill="currentColor"/>
-                    <rect x="1" y="2" width="2.2" height="10.6" rx=".8" fill="currentColor" opacity=".4"/>
-                  </svg>
-                </a>
-                <a href="https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026/scores-fixtures?country=GB&wtw-filter=ALL" target="_blank" rel="noreferrer" title="Fixtures &amp; TV"
-                  style={{ color: 'var(--muted)', textDecoration: 'none', border: '1px solid var(--hairline-soft)', borderRadius: 999, padding: '3px 7px', display: 'flex', alignItems: 'center' }}>
-                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="1" y="3.5" width="14" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
-                    <line x1="4.5" y1="13.5" x2="11.5" y2="13.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-                    <line x1="8" y1="12.5" x2="8" y2="13.5" stroke="currentColor" strokeWidth="1.4"/>
-                    <path d="M6 10.5L9.5 8 6 5.5v5z" fill="currentColor" opacity=".7"/>
-                  </svg>
-                </a>
-              </div>
-            } />
+            <SectionHeader badge="WC" badgeColor="var(--badge-cam)" label={t.title} right={headerInfo} />
           </div>
           {loading ? (
             <div style={{ padding: 24, display: 'flex', justifyContent: 'center' }}><Spinner /></div>
-          ) : empty ? (
-            <div style={{ padding: '12px 16px 16px', fontSize: 12, color: 'var(--subtle)' }}>No matches in the last / next 24h</div>
           ) : (
             <React.Fragment>
-              {data.recent.length > 0 && (
-                <div style={{ padding: '4px 16px 12px' }}>
-                  <div className="mono" style={{ fontSize: 10, color: 'var(--subtle)', letterSpacing: 1.2, marginBottom: 8, textTransform: 'uppercase' }}>Recent Results</div>
-                  {data.recent.map((g, i) => {
-                    const open = !!revealed[g.id];
-                    return (
-                      <button key={g.id} onClick={() => setRevealed(r => ({ ...r, [g.id]: !r[g.id] }))} style={{
-                        all: 'unset', cursor: 'pointer',
-                        display: 'grid', gridTemplateColumns: '1fr auto 18px auto auto',
-                        alignItems: 'center', gap: 8, width: '100%',
-                        padding: '6px 0', fontSize: 12,
-                        borderTop: i === 0 ? 'none' : '1px dashed var(--hairline-soft)',
-                        whiteSpace: 'nowrap',
-                      }}>
-                        <div style={{ fontSize: 12.5, overflow: 'hidden', textOverflow: 'ellipsis' }}>{`${g.homeFlag ? g.homeFlag + ' ' : ''}${g.home} v ${g.awayFlag ? g.awayFlag + ' ' : ''}${g.away}`}</div>
-                        <div className="mono" style={{
-                          fontSize: 11, fontWeight: open ? 600 : 400,
-                          color: open ? 'var(--accent)' : 'var(--subtle)',
-                        }}>
-                          {open ? `${g.homeScore}–${g.awayScore}` : 'show'}
-                        </div>
-                        <div style={{ textAlign: 'right' }}>
-                          {g.highlightUrl && (
-                            <a href={g.highlightUrl} target="_blank" rel="noreferrer"
-                              onClick={e => e.stopPropagation()}
-                              title="ITV Highlights"
-                              style={{ color: 'var(--red)', fontSize: 13, textDecoration: 'none', opacity: 0.85 }}>▶</a>
-                          )}
-                        </div>
-                        <div className="mono" style={{ color: 'var(--muted)', fontSize: 10.5 }}>{fmtDay(g.date)}</div>
-                        <div className="mono" style={{ color: 'var(--muted)', fontSize: 10.5 }}>{fmtTime(g.date)}</div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-              {data.upcoming.length > 0 && (
-                <div style={{ borderTop: '1px solid var(--hairline-soft)', padding: '12px 16px 14px' }}>
-                  <div className="mono" style={{ fontSize: 10, color: 'var(--subtle)', letterSpacing: 1.2, marginBottom: 8, textTransform: 'uppercase' }}>Upcoming</div>
-                  {data.upcoming.map(g => (
-                    <div key={g.id} style={{
-                      display: 'grid', gridTemplateColumns: '1fr auto auto',
-                      alignItems: 'center', gap: 8, padding: '5px 0', fontSize: 12.5, whiteSpace: 'nowrap',
-                    }}>
-                      <div style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{`${g.homeFlag ? g.homeFlag + ' ' : ''}${g.home} v ${g.awayFlag ? g.awayFlag + ' ' : ''}${g.away}`}</div>
-                      <div className="mono" style={{ color: 'var(--muted)', fontSize: 10.5 }}>{fmtDay(g.date)}</div>
-                      <div className="mono" style={{ color: 'var(--muted)', fontSize: 10.5, display: 'flex', alignItems: 'center', gap: 5 }}>
-                        {g.live ? (
-                          <React.Fragment>
-                            <span style={{ width: 6, height: 6, borderRadius: 999, background: 'var(--red)', flexShrink: 0 }} />
-                            <span style={{ color: 'var(--red)', fontWeight: 600 }}>LIVE</span>
-                          </React.Fragment>
-                        ) : (
-                          <React.Fragment>
-                            {isEvening(g.date) && <span style={{ width: 6, height: 6, borderRadius: 999, background: 'var(--amber)', flexShrink: 0 }} />}
-                            {fmtTime(g.date)}
-                          </React.Fragment>
-                        )}
-                      </div>
+              {empty ? (
+                <div style={{ padding: '12px 16px 16px', fontSize: 12, color: 'var(--subtle)' }}>{t.empty}</div>
+              ) : (
+                <React.Fragment>
+                  {data.recent.length > 0 && (
+                    <div style={{ padding: '4px 16px 12px' }}>
+                      <div className="mono" style={{ fontSize: 10, color: 'var(--subtle)', letterSpacing: 1.2, marginBottom: 8, textTransform: 'uppercase' }}>{t.results}</div>
+                      {data.recent.map((g, i) => {
+                        const open = !!revealed[g.id];
+                        return (
+                          <button key={g.id} onClick={() => setRevealed(r => ({ ...r, [g.id]: !r[g.id] }))} style={{
+                            all: 'unset', cursor: 'pointer',
+                            display: 'grid', gridTemplateColumns: '1fr auto 18px auto auto',
+                            alignItems: 'center', gap: 8, width: '100%',
+                            padding: '6px 0', fontSize: 12,
+                            borderTop: i === 0 ? 'none' : '1px dashed var(--hairline-soft)',
+                            whiteSpace: 'nowrap',
+                          }}>
+                            <div style={{ fontSize: 12.5, overflow: 'hidden', textOverflow: 'ellipsis' }}>{matchName(g)}</div>
+                            <div className="mono" style={{
+                              fontSize: 11, fontWeight: open ? 600 : 400,
+                              color: open ? 'var(--accent)' : 'var(--subtle)',
+                            }}>
+                              {open ? `${g.homeScore}–${g.awayScore}` : t.show}
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                              {g.highlightUrl && (
+                                <a href={g.highlightUrl} target="_blank" rel="noreferrer"
+                                  onClick={e => e.stopPropagation()}
+                                  title="ITV Highlights"
+                                  style={{ color: 'var(--red)', fontSize: 13, textDecoration: 'none', opacity: 0.85 }}>▶</a>
+                              )}
+                            </div>
+                            <div className="mono" style={{ color: 'var(--muted)', fontSize: 10.5 }}>{fmtDay(g.date)}</div>
+                            <div className="mono" style={{ color: 'var(--muted)', fontSize: 10.5 }}>{fmtTime(g.date)}</div>
+                          </button>
+                        );
+                      })}
                     </div>
-                  ))}
-                </div>
+                  )}
+                  {data.upcoming.length > 0 && (
+                    <div style={{ borderTop: '1px solid var(--hairline-soft)', padding: '12px 16px 14px' }}>
+                      <div className="mono" style={{ fontSize: 10, color: 'var(--subtle)', letterSpacing: 1.2, marginBottom: 8, textTransform: 'uppercase' }}>{t.upcoming}</div>
+                      {data.upcoming.map(g => (
+                        <div key={g.id} style={{
+                          display: 'grid', gridTemplateColumns: '1fr auto auto',
+                          alignItems: 'center', gap: 8, padding: '5px 0', fontSize: 12.5, whiteSpace: 'nowrap',
+                        }}>
+                          <div style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{matchName(g)}</div>
+                          <div className="mono" style={{ color: 'var(--muted)', fontSize: 10.5 }}>{fmtDay(g.date)}</div>
+                          <div className="mono" style={{ color: 'var(--muted)', fontSize: 10.5, display: 'flex', alignItems: 'center', gap: 5 }}>
+                            {g.live ? (
+                              <React.Fragment>
+                                <span style={{ width: 6, height: 6, borderRadius: 999, background: 'var(--red)', flexShrink: 0 }} />
+                                <span style={{ color: 'var(--red)', fontWeight: 600 }}>{t.live}</span>
+                              </React.Fragment>
+                            ) : (
+                              fmtTime(g.date)
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </React.Fragment>
               )}
+              {controls}
             </React.Fragment>
           )}
         </Panel>
       );
     }
 
+    function ThemeToggle({ theme, onToggle }) {
+      const dark = theme === 'dark';
+      return (
+        <button onClick={onToggle} aria-label="Toggle theme" title={dark ? 'Switch to light' : 'Switch to dark'} style={{
+          all: 'unset', cursor: 'pointer',
+          width: 30, height: 30, borderRadius: 999,
+          border: '1px solid var(--hairline-soft)', background: 'var(--surface)',
+          display: 'grid', placeItems: 'center', color: 'var(--muted)',
+        }}>
+          {dark ? (
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <circle cx="12" cy="12" r="4" />
+              <path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.4 1.4M17.6 17.6L19 19M19 5l-1.4 1.4M6.4 17.6L5 19" />
+            </svg>
+          ) : (
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
+            </svg>
+          )}
+        </button>
+      );
+    }
+
+    function LangToggle({ lang, onToggle }) {
+      const cell = (active) => ({
+        padding: '0 9px', height: 28, display: 'flex', alignItems: 'center',
+        fontSize: 11, fontWeight: 600, letterSpacing: 0.3,
+        color: active ? 'var(--bg)' : 'var(--muted)',
+        background: active ? 'var(--text)' : 'transparent',
+        transition: 'background .15s, color .15s',
+      });
+      return (
+        <div className="mono" onClick={onToggle} role="button" aria-label="Toggle language" title="English / 繁體中文" style={{
+          display: 'inline-flex', alignItems: 'center', cursor: 'pointer',
+          border: '1px solid var(--hairline-soft)', borderRadius: 999, overflow: 'hidden',
+          background: 'var(--surface)', userSelect: 'none',
+        }}>
+          <span style={cell(lang === 'en')}>EN</span>
+          <span style={cell(lang === 'zh')}>繁</span>
+        </div>
+      );
+    }
+
     function App() {
       const [data, setData] = useState(null);
       const [loading, setLoading] = useState(true);
+      const [theme, setTheme] = useState(() => {
+        try { return localStorage.getItem('wc2026-theme') || 'light'; } catch (_) { return 'light'; }
+      });
+      const [lang, setLang] = useState(() => {
+        try { return localStorage.getItem('wc2026-lang') || 'en'; } catch (_) { return 'en'; }
+      });
+      const t = T[lang] || T.en;
+
+      useEffect(() => {
+        document.documentElement.dataset.theme = theme;
+        try { localStorage.setItem('wc2026-theme', theme); } catch (_) {}
+      }, [theme]);
+
+      useEffect(() => {
+        document.documentElement.lang = lang === 'zh' ? 'zh-Hant' : 'en';
+        try { localStorage.setItem('wc2026-lang', lang); } catch (_) {}
+      }, [lang]);
 
       const load = async () => {
         try {
@@ -235,9 +359,26 @@
 
       return (
         <div className="wrap">
-          <WorldCupWidget data={data} loading={loading} />
+          <WorldCupWidget
+            data={data} loading={loading} lang={lang} t={t} theme={theme}
+            onToggleTheme={() => setTheme(v => v === 'light' ? 'dark' : 'light')}
+            onToggleLang={() => setLang(v => v === 'en' ? 'zh' : 'en')}
+          />
           <div className="page-foot">
-            Scores via ESPN · Highlights via <a href="https://www.youtube.com/@ITVSport" target="_blank" rel="noreferrer">ITV Sport</a> · all times local
+            <div style={{ marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
+              <span>by 劍橋船夫 hk.cambridge</span>
+              <a href="https://www.instagram.com/hk.cambridge/" target="_blank" rel="noreferrer" aria-label="Instagram" style={{ color: 'var(--muted)', display: 'inline-flex' }}>
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="14" height="14" rx="3.5"/><circle cx="10" cy="10" r="3.3"/><circle cx="14.2" cy="5.8" r=".8" fill="currentColor"/>
+                </svg>
+              </a>
+              <a href="https://www.threads.com/@hk.cambridge" target="_blank" rel="noreferrer" aria-label="Threads" style={{ color: 'var(--muted)', display: 'inline-flex' }}>
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="10" cy="10" r="7.5"/><path d="M7.5 9.5c0-2 1.5-3.2 3.5-3.2 1.9 0 3 .9 3.5 2.2M13 13c-.6 1-2 1.5-3.5 1.3-2-.2-3-1.2-3-2.5 0-1.2 1.2-2 3-1.9 2.7.1 4 1.4 3.8 3-.2 1.5-1.7 2.3-3.8 2.3"/>
+                </svg>
+              </a>
+            </div>
+            <div>{t.footA}<a href="https://www.youtube.com/@ITVSport" target="_blank" rel="noreferrer">ITV Sport</a>{t.footB}</div>
           </div>
         </div>
       );
